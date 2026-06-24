@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>山梨酸钾销售数据分析仪表板</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e0e0e0; min-height: 100vh; }
+
+  .header {
+    background: linear-gradient(135deg, #1a1d2e 0%, #16213e 100%);
+    border-bottom: 1px solid #2a2d3e;
+    padding: 20px 32px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .header-icon { font-size: 28px; }
+  .header h1 { font-size: 20px; font-weight: 700; color: #fff; letter-spacing: 0.3px; }
+  .header p { font-size: 13px; color: #8888aa; margin-top: 2px; }
+
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 16px; padding: 24px 32px 8px;
+  }
+  .kpi {
+    background: #1a1d2e; border: 1px solid #2a2d3e; border-radius: 12px;
+    padding: 18px 20px; position: relative; overflow: hidden;
+  }
+  .kpi::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .kpi.blue::before { background: linear-gradient(90deg, #4f80ff, #6fa3ff); }
+  .kpi.green::before { background: linear-gradient(90deg, #22c55e, #4ade80); }
+  .kpi.orange::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+  .kpi.red::before { background: linear-gradient(90deg, #ef4444, #f87171); }
+  .kpi-label { font-size: 12px; color: #8888aa; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+  .kpi-value { font-size: 26px; font-weight: 700; color: #fff; line-height: 1; }
+  .kpi-sub { font-size: 12px; color: #8888aa; margin-top: 6px; }
+  .kpi-sub .up { color: #4ade80; } .kpi-sub .down { color: #f87171; }
+
+  .charts-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px; padding: 16px 32px;
+  }
+  .chart-card {
+    background: #1a1d2e; border: 1px solid #2a2d3e; border-radius: 12px;
+    padding: 20px; position: relative;
+  }
+  .chart-card.wide { grid-column: 1 / -1; }
+  .chart-title { font-size: 14px; font-weight: 600; color: #ccc; margin-bottom: 4px; }
+  .chart-sub { font-size: 12px; color: #666; margin-bottom: 16px; }
+  .chart-wrap { position: relative; }
+
+  .tab-row {
+    display: flex; gap: 8px; margin-bottom: 16px;
+  }
+  .tab {
+    padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1px solid #2a2d3e; background: transparent; color: #8888aa;
+    transition: all 0.2s;
+  }
+  .tab.active { background: #4f80ff; color: #fff; border-color: #4f80ff; }
+  .tab:hover:not(.active) { border-color: #4f80ff; color: #4f80ff; }
+
+  .insight-box {
+    background: #0d1117; border: 1px solid #2a2d3e; border-radius: 8px;
+    padding: 14px 16px; margin-top: 12px; font-size: 12px; color: #8888aa; line-height: 1.7;
+  }
+  .insight-box span { color: #6fa3ff; font-weight: 600; }
+  .insight-box .warn { color: #fbbf24; }
+  .insight-box .good { color: #4ade80; }
+
+  footer { text-align: center; padding: 20px; font-size: 11px; color: #444; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">📊</div>
+  <div>
+    <h1>山梨酸钾（Potassium Sorbate）销售分析仪表板</h1>
+    <p>数据周期：2023年 — 2025年 &nbsp;|&nbsp; 174条交易记录 &nbsp;|&nbsp; BU1 部门</p>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi blue">
+    <div class="kpi-label">总销售额</div>
+    <div class="kpi-value">$1.96M</div>
+    <div class="kpi-sub">2023–2025 累计</div>
+  </div>
+  <div class="kpi orange">
+    <div class="kpi-label">总销量</div>
+    <div class="kpi-value">745,550 kg</div>
+    <div class="kpi-sub">2023–2025 累计</div>
+  </div>
+  <div class="kpi green">
+    <div class="kpi-label">2024年毛利</div>
+    <div class="kpi-value">$55,491</div>
+    <div class="kpi-sub"><span class="good">↑ 最佳年份</span>，GPM ≈ 4.6%</div>
+  </div>
+  <div class="kpi red">
+    <div class="kpi-label">2025年毛利</div>
+    <div class="kpi-value">-$93,161</div>
+    <div class="kpi-sub"><span class="down">↓ 亏损，需关注成本</span></div>
+  </div>
+</div>
+
+<div class="charts-grid">
+
+  <!-- Chart 1: Revenue by Year -->
+  <div class="chart-card">
+    <div class="chart-title">年度销售额 & 毛利对比</div>
+    <div class="chart-sub">Revenue vs Gross Profit by Year</div>
+    <div class="chart-wrap"><canvas id="yearlyChart" height="200"></canvas></div>
+    <div class="insight-box">
+      2024年销售额达峰值 <span>$1.20M</span>，主因 12 月上海瑞岐源大订单（<span>$638K</span>）。2025年销售额大幅回落，且毛利严重亏损 <span class="warn">-$93K</span>，主要来自 ACT 和 HSH Chemie 的成本倒挂。
+    </div>
+  </div>
+
+  <!-- Chart 2: Revenue by Region -->
+  <div class="chart-card">
+    <div class="chart-title">区域销售额分布</div>
+    <div class="chart-sub">Revenue by Region (全周期)</div>
+    <div class="chart-wrap"><canvas id="regionChart" height="200"></canvas></div>
+    <div class="insight-box">
+      <span>FNE（欧洲）</span> 是最大市场，占比 <span>63%</span>，但毛利为负。ROW（Rest of World，其他地区）贡献 <span>33%</span> 收入且盈利，FNOI（大洋洲）和 FNA（北美）体量小但相对稳定。
+    </div>
+  </div>
+
+  <!-- Chart 3: Monthly trend (wide) -->
+  <div class="chart-card wide">
+    <div class="chart-title">月度销售额趋势</div>
+    <div class="chart-sub">Monthly Revenue Trend 2023–2025</div>
+    <div class="tab-row">
+      <button class="tab active" onclick="showTrend('revenue', this)">销售额</button>
+      <button class="tab" onclick="showTrend('gp', this)">毛利</button>
+      <button class="tab" onclick="showTrend('qty', this)">销量 (kg)</button>
+    </div>
+    <div class="chart-wrap"><canvas id="trendChart" height="130"></canvas></div>
+  </div>
+
+  <!-- Chart 4: Top customers -->
+  <div class="chart-card">
+    <div class="chart-title">Top 8 客户销售额</div>
+    <div class="chart-sub">Revenue vs Gross Profit by Customer</div>
+    <div class="chart-wrap"><canvas id="custChart" height="220"></canvas></div>
+  </div>
+
+  <!-- Chart 5: GP rate by customer -->
+  <div class="chart-card">
+    <div class="chart-title">客户毛利率对比</div>
+    <div class="chart-sub">Gross Profit Margin % by Customer</div>
+    <div class="chart-wrap"><canvas id="gpRateChart" height="220"></canvas></div>
+    <div class="insight-box">
+      <span class="good">盈利客户</span>：Prinova Germany（GPM 12%）、Deutsche Vilomix（10.2%）、上海瑞岐源（1%，但绝对值大）。<span class="warn">亏损客户</span>：HSH Chemie（-33.7%）、ACT（-3.2%）、RFI（-7.2%），需排查定价或成本结构。
+    </div>
+  </div>
+
+</div>
+
+<footer>数据来源：D4 部门山梨酸钾销售明细 · 174条记录 · 2023–2025</footer>
+
+<script>
+// ── Data ──
+const monthlyRaw = [
+  {year:2023,m:3,rev:82795,gp:4880,qty:17500},{year:2023,m:4,rev:6350,gp:619,qty:1000},
+  {year:2023,m:5,rev:6350,gp:596,qty:1000},{year:2023,m:6,rev:18950,gp:147,qty:5000},
+  {year:2023,m:8,rev:71359,gp:-46153,qty:25500},{year:2023,m:9,rev:77273,gp:8995,qty:28000},
+  {year:2023,m:11,rev:138632,gp:19188,qty:49000},{year:2023,m:12,rev:14945,gp:2438,qty:5000},
+  {year:2024,m:1,rev:86993,gp:10911,qty:30000},{year:2024,m:4,rev:26725,gp:882,qty:10000},
+  {year:2024,m:5,rev:73276,gp:4279,qty:26500},{year:2024,m:6,rev:1604,gp:290,qty:500},
+  {year:2024,m:7,rev:319370,gp:43907,qty:104075},{year:2024,m:8,rev:20343,gp:-1820,qty:5750},
+  {year:2024,m:9,rev:18667,gp:-8725,qty:6200},{year:2024,m:10,rev:5826,gp:-404,qty:1700},
+  {year:2024,m:11,rev:4661,gp:-32,qty:1250},{year:2024,m:12,rev:640516,gp:6202,qty:300500},
+  {year:2025,m:1,rev:17146,gp:-1693,qty:5700},{year:2025,m:2,rev:2275,gp:-1233,qty:825},
+  {year:2025,m:3,rev:13913,gp:-1365,qty:4850},{year:2025,m:4,rev:6695,gp:-1716,qty:2175},
+  {year:2025,m:5,rev:22764,gp:-1736,qty:7050},{year:2025,m:6,rev:1112,gp:-466,qty:275},
+  {year:2025,m:7,rev:15612,gp:-5896,qty:4525},{year:2025,m:8,rev:187769,gp:-52617,qty:73250},
+  {year:2025,m:9,rev:3957,gp:-2645,qty:1225},{year:2025,m:10,rev:20421,gp:-3262,qty:6600},
+  {year:2025,m:11,rev:2487,gp:-594,qty:750},{year:2025,m:12,rev:47990,gp:-19937,qty:19550}
+];
+
+const labels = monthlyRaw.map(d => `${d.year}-${String(d.m).padStart(2,'0')}`);
+const revData = monthlyRaw.map(d => d.rev);
+const gpData  = monthlyRaw.map(d => d.gp);
+const qtyData = monthlyRaw.map(d => d.qty);
+
+const gridColor  = 'rgba(255,255,255,0.06)';
+const textColor  = '#8888aa';
+const blue       = '#4f80ff';
+const green      = '#22c55e';
+const orange     = '#f59e0b';
+const red        = '#ef4444';
+const lightBlue  = 'rgba(79,128,255,0.15)';
+
+Chart.defaults.color = textColor;
+Chart.defaults.borderColor = gridColor;
+
+// ── 1. Yearly Bar+Line ──
+const yearlyCtx = document.getElementById('yearlyChart').getContext('2d');
+new Chart(yearlyCtx, {
+  type: 'bar',
+  data: {
+    labels: ['2023','2024','2025'],
+    datasets: [
+      { label: '销售额 ($)', data: [416655, 1197982, 342140], backgroundColor: ['rgba(79,128,255,0.6)','rgba(79,128,255,0.8)','rgba(79,128,255,0.4)'], borderRadius: 6, order: 2 },
+      { label: '毛利 ($)', data: [-9289, 55491, -93161], type: 'line', borderColor: orange, backgroundColor: 'transparent', pointBackgroundColor: orange, pointRadius: 5, borderWidth: 2.5, tension: 0.3, order: 1, yAxisID: 'y2' }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: {size:11} } }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString()}` } } },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: textColor } },
+      y: { grid: { color: gridColor }, ticks: { color: textColor, callback: v => '$' + (v/1000).toFixed(0)+'K' } },
+      y2: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: orange, callback: v => '$' + (v/1000).toFixed(0)+'K' } }
+    }
+  }
+});
+
+// ── 2. Region Doughnut ──
+const regionCtx = document.getElementById('regionChart').getContext('2d');
+new Chart(regionCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['FNE 欧洲', 'ROW 其他地区', 'FNA 北美', 'FNOI 大洋洲'],
+    datasets: [{ data: [1212519, 638875, 83797, 21586], backgroundColor: [blue, green, orange, '#a855f7'], borderColor: '#1a1d2e', borderWidth: 3, hoverOffset: 8 }]
+  },
+  options: {
+    responsive: true, cutout: '62%',
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12, font: {size:11}, padding: 12 } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: $${(ctx.parsed/1000).toFixed(0)}K (${(ctx.parsed/1956778*100).toFixed(1)}%)` } }
+    }
+  }
+});
+
+// ── 3. Trend Chart ──
+let trendChart;
+function buildTrend(field) {
+  const data = field === 'revenue' ? revData : field === 'gp' ? gpData : qtyData;
+  const color = field === 'revenue' ? blue : field === 'gp' ? green : orange;
+  const label = field === 'revenue' ? '月度销售额 ($)' : field === 'gp' ? '月度毛利 ($)' : '月度销量 (kg)';
+
+  if (trendChart) trendChart.destroy();
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label,
+        data,
+        borderColor: color,
+        backgroundColor: color.replace('ff','33').replace('#','rgba(').replace('33','0.12)').startsWith('rgba') ? color.replace(')', ',0.12)').replace('rgb','rgba') : 'rgba(79,128,255,0.12)',
+        fill: true, tension: 0.3, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `${label}: ${field==='qty' ? ctx.parsed.y.toLocaleString()+' kg' : '$'+ctx.parsed.y.toLocaleString()}` } }
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor, maxTicksLimit: 12, font:{size:10} } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor, callback: v => field==='qty' ? (v/1000).toFixed(0)+'K' : '$'+(v/1000).toFixed(0)+'K' } }
+      }
+    }
+  });
+}
+buildTrend('revenue');
+
+function showTrend(field, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  buildTrend(field);
+}
+
+// ── 4. Customer Bar ──
+const custNames = ['上海瑞岐源', 'Atlantic CT', 'Deutsche Vilomix', 'RFI Food Ing.', 'HSH Chemie', 'Ferdinand KS', 'Prinova Germany', 'Phlex Proteins'];
+const custRev  = [638875, 520428, 150629, 117641, 103029, 88656, 77273, 54575];
+const custGP   = [6403, -16550, 15407, -8505, -34679, 3507, 9276, -2434];
+
+const custCtx = document.getElementById('custChart').getContext('2d');
+new Chart(custCtx, {
+  type: 'bar',
+  data: {
+    labels: custNames,
+    datasets: [
+      { label: '销售额 ($)', data: custRev, backgroundColor: 'rgba(79,128,255,0.7)', borderRadius: 4 },
+      { label: '毛利 ($)', data: custGP, backgroundColor: custGP.map(v => v >= 0 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)'), borderRadius: 4 }
+    ]
+  },
+  options: {
+    responsive: true, indexAxis: 'y',
+    plugins: { legend: { position: 'top', labels: {boxWidth:12, font:{size:11}} }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.parsed.x.toLocaleString()}` } } },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: textColor, callback: v => '$'+(v/1000).toFixed(0)+'K' } },
+      y: { grid: { color: gridColor }, ticks: { color: textColor, font:{size:10} } }
+    }
+  }
+});
+
+// ── 5. GP Rate Chart ──
+const gpRates = custRev.map((r, i) => r === 0 ? 0 : +(custGP[i] / r * 100).toFixed(1));
+const gpRateCtx = document.getElementById('gpRateChart').getContext('2d');
+new Chart(gpRateCtx, {
+  type: 'bar',
+  data: {
+    labels: custNames,
+    datasets: [{
+      label: '毛利率 (%)',
+      data: gpRates,
+      backgroundColor: gpRates.map(v => v >= 5 ? 'rgba(34,197,94,0.8)' : v >= 0 ? 'rgba(245,158,11,0.8)' : 'rgba(239,68,68,0.8)'),
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true, indexAxis: 'y',
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `GPM: ${ctx.parsed.x}%` } } },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: textColor, callback: v => v+'%' } },
+      y: { grid: { color: gridColor }, ticks: { color: textColor, font:{size:10} } }
+    }
+  }
+});
+</script>
+</body>
+</html>
